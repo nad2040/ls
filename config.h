@@ -54,6 +54,6 @@ typedef struct config_t {
 } config_t;
 
 void
-argparse(int, char *[], config_t *);
+argparse(int *, char ***);
 
 #endif /* _CONFIG_H_ */

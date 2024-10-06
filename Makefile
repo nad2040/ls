@@ -16,3 +16,6 @@ clean:
 
 depend:
 	mkdep -- ${CFLAGS} *.c
+
+tags:
+	ctags *.c *.h
