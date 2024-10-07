@@ -133,7 +133,7 @@ ls(int argc, char *argv[])
 		path_argv = argv;
 	}
 
-	fts_open_options = FTS_PHYSICAL | FTS_NOCHDIR;
+	fts_open_options = FTS_PHYSICAL;
 	if (ls_config.dots == ALL_DOTS) {
 		fts_open_options |= FTS_SEEDOT;
 	}
@@ -185,6 +185,12 @@ ls(int argc, char *argv[])
 		}
 
 		switch (fs_node->fts_info) {
+		case FTS_DNR: /* FALLTHROUGH */
+		case FTS_ERR: /* FALLTHROUGH */
+		case FTS_NS: /* FALLTHROUGH */
+			errno = fs_node->fts_errno;
+			warn("fts_read");
+			break;
 		case FTS_D:
 			children = fts_children(ftsp, 0);
 			if (ls_config.recurse == FULL_DEPTH && fs_node->fts_level > 0) {
@@ -207,6 +213,9 @@ ls(int argc, char *argv[])
 		default:
 			break;
 		}
+	}
+	if (errno != 0) {
+		err(EXIT_FAILURE, "fts_read");
 	}
 
 	if (fts_close(ftsp) < 0) {
