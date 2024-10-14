@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-ansi -Wall -Werror -Wextra -Wpedantic -Wshadow -g -Wformat=2 -Wjump-misses-init -Wlogical-op
 PROG=ls
-OBJS=ls.o config.o
+OBJS=ls.o config.o sort.o util.o
 
 all: ${PROG}
 

@@ -1,12 +1,6 @@
-#include <ctype.h>
-#include <err.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
 #include "config.h"
+
+#include <stdlib.h>
 
 config_t ls_config;
 
@@ -14,7 +8,8 @@ config_t ls_config;
  * Set the default options for the ls_config following the manpage.
  */
 void
-default_config(void) {
+default_config(void)
+{
 	int istty;
 
 	ls_config.opts = 0;
@@ -29,7 +24,8 @@ default_config(void) {
 		ls_config.dots = DOTFILES;
 	}
 
-	/* decide whether to print ? or the raw character depending on the output filetype */
+	/* decide whether to print ? or the raw character depending on the
+	 * output filetype */
 	errno = 0;
 	if ((istty = isatty(STDOUT_FILENO)) == 1) {
 		UNSET(ls_config.opts, RAW_PRINT);
@@ -38,6 +34,8 @@ default_config(void) {
 	} else {
 		err(EXIT_FAILURE, "isatty");
 	}
+
+	tzset();
 }
 
 /*
@@ -46,9 +44,37 @@ default_config(void) {
 void
 usage(void)
 {
-	errx(EXIT_FAILURE, "Usage: %s [-AacdFfhiklnqRrSstuw] [file ...]\n", getprogname());
+	errx(EXIT_FAILURE, "Usage: %s [-AacdFfhiklnqRrSstuw] [file ...]\n",
+	     getprogname());
 }
 
+#define BLOCKSIZE 512 /* default BLOCKSIZE in struct stat */
+
+/*
+ * Get the BLOCKSIZE environment variable.
+ */
+long
+get_blocksize_env()
+{
+	long blocksize;
+	char *blocksize_env, *ep;
+
+	if ((blocksize_env = getenv("BLOCKSIZE")) == NULL) {
+		return BLOCKSIZE;
+	}
+	errno = 0;
+	blocksize = strtol(blocksize_env, &ep, 10);
+	if (ep == blocksize_env || *ep != '\0') {
+		errx(EXIT_FAILURE, "invalid BLOCKSIZE %s", blocksize_env);
+	}
+	if (errno != 0) {
+		err(EXIT_FAILURE, "strtol BLOCKSIZE");
+	}
+	if (blocksize < 0) {
+		errx(EXIT_FAILURE, "negative BLOCKSIZE %ld", blocksize);
+	}
+	return blocksize;
+}
 
 /*
  * Parse the arguments using getopts(3)
@@ -57,47 +83,56 @@ usage(void)
 void
 argparse(int *argc, char ***argv)
 {
-	int c;
 	bool has_set_a;
+	int c;
+	long blocksize_env;
 
 	memset(&ls_config, 0, sizeof(config_t));
 
 	default_config();
 
+	blocksize_env = get_blocksize_env();
+
 	opterr = 0;
 	while ((c = getopt(*argc, *argv, "AacdFfhiklnqRrSstuw:")) != -1) {
 		switch (c) {
-		case 'A':	/* don't show dotdirs */
+		case 'A': /* don't show dotdirs */
 			if (!has_set_a) {
 				ls_config.dots = DOTFILES;
 			}
 			break;
-		case 'a':	/* show dotfiles and dotdirs */
-			has_set_a = true; /* do not unset once set - behavior copied from ls(1) */
+		case 'a':                 /* show dotfiles and dotdirs */
+			has_set_a = true; /* do not unset once set - behavior
+			                     copied from ls(1) */
 			ls_config.dots = ALL_DOTS;
 			break;
-		case 'F':	/* filetype symbol for each filetype, applies in short and long formats */
-			SET(ls_config.opts, FILETYPE_SYM);
+		case 'F': /* filetype symbol for each filetype, applies in short
+		             and long formats */
+			SET(ls_config.opts, SHOW_FILETYPE_SYM);
 			break;
-		case 'i':	/* show inode */
+		case 'i': /* show inode */
 			SET(ls_config.opts, SHOW_INODES);
 			break;
-		case 's':	/* show blksize count */
+		case 's': /* show blksize count */
 			SET(ls_config.opts, SHOW_BLKCOUNT);
 			ls_config.blkcount_fmt = BLKSIZE_ENV;
+			ls_config.blocksize = blocksize_env;
 			break;
-		case 'h':	/* show the human readable for both regular size and blksize count */
+		case 'h': /* show the human readable for both regular size and
+		             blksize count */
 			ls_config.blkcount_fmt = HUMAN_READABLE;
 			break;
-		case 'k':	/* display blksize count with size 1kB */
+		case 'k': /* display blksize count with size 1kB */
 			ls_config.blkcount_fmt = BLKSIZE_KILO;
+			ls_config.blocksize = 1024;
 			break;
 			/* long format modifiers */
-		case 'l':	/* try to use name instead, fall back to id if missing */
+		case 'l': /* try to use name instead, fall back to id if missing
+		           */
 			SET(ls_config.opts, LONG_FORMAT);
 			UNSET(ls_config.opts, SHOW_ID_ONLY);
 			break;
-		case 'n':	/* show id only */
+		case 'n': /* show id only */
 			SET(ls_config.opts, LONG_FORMAT);
 			SET(ls_config.opts, SHOW_ID_ONLY);
 			break;
@@ -112,7 +147,7 @@ argparse(int *argc, char ***argv)
 		case 'r':
 			SET(ls_config.opts, REVERSE_SORT);
 			break;
-		case 'f':	/* no sort - read dirents one by one */
+		case 'f': /* no sort - read dirents one by one */
 			SET(ls_config.opts, NO_SORT);
 			break;
 		case 'S':
@@ -120,7 +155,8 @@ argparse(int *argc, char ***argv)
 			break;
 			/* time flags */
 		case 't':
-			SET(ls_config.opts, TIME_SORT); /* only -t enables sorting by time */
+			SET(ls_config.opts,
+			    TIME_SORT); /* only -t enables sorting by time */
 			ls_config.time = MTIME;
 			break;
 		case 'u':
@@ -138,10 +174,11 @@ argparse(int *argc, char ***argv)
 			break;
 		case '?':
 			if (isprint(optopt)) {
-
-				errx(EXIT_FAILURE, "Unknown option `%c'\n", optopt);
+				errx(EXIT_FAILURE, "Unknown option `%c'\n",
+				     optopt);
 			} else {
-				errx(EXIT_FAILURE, "Unknown option `\\x%x'\n", optopt);
+				errx(EXIT_FAILURE, "Unknown option `\\x%x'\n",
+				     optopt);
 			}
 		default:
 			errx(EXIT_FAILURE, "getopt");
