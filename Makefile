@@ -1,5 +1,8 @@
-CC=gcc
-CFLAGS=-ansi -Wall -Werror -Wextra -Wpedantic -Wshadow -g -Wformat=2 -Wjump-misses-init -Wlogical-op
+CC = gcc
+CFLAGS = -Wall -Werror -Wextra -Wpedantic -Wshadow -Wformat=2 -Wjump-misses-init -Wlogical-op
+CFLAGS += -std=c99 -g
+CFLAGS += -lutil
+LIBFLAGS=-l
 PROG=ls
 OBJS=ls.o config.o sort.o util.o
 

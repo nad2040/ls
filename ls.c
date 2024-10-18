@@ -1,12 +1,17 @@
 #include "ls.h"
 
+#include <fts.h>
+#include <stdint.h>
+
 #include "config.h"
+
 
 extern config_t ls_config;
 
 int
 ls(int argc, char *argv[])
 {
+	uint8_t exitcode;
 	int fts_open_options;
 	int max_depth;
 	int ignore_trailing_slash_len;
@@ -60,6 +65,14 @@ ls(int argc, char *argv[])
 		break;
 	}
 
+	exitcode = EXIT_SUCCESS;
+
+	/* TODO:
+	 * Fix the sort function for the first iteration to first sort by directory
+	 * or non-directory, and then by the sort function determined by config.
+	 * refactor sort_func and max_depth into config struct
+	 */
+
 	/* manual doesn't explicitly state NULL is returned, so check errno as
 	 * well */
 	errno = 0;
@@ -73,6 +86,8 @@ ls(int argc, char *argv[])
 		if (fs_node->fts_level > max_depth || fs_node->fts_level < 0) {
 			/* printf("Skipping %s at level %d\n",
 			 * fs_node->fts_path, fs_node->fts_level); */
+
+			fts_set(ftsp, fs_node, FTS_SKIP);
 			continue;
 		}
 
@@ -80,8 +95,10 @@ ls(int argc, char *argv[])
 		case FTS_DNR: /* FALLTHROUGH */
 		case FTS_ERR: /* FALLTHROUGH */
 		case FTS_NS:  /* FALLTHROUGH */
+		case FTS_NSOK:
 			errno = fs_node->fts_errno;
-			warn("fts_read");
+			warn("%s", fs_node->fts_name);
+			exitcode = EXIT_FAILURE;
 			break;
 		case FTS_D:
 			children = fts_children(ftsp, 0);
@@ -102,6 +119,10 @@ ls(int argc, char *argv[])
 			print_fileinfos(fileinfos);
 			fileinfos_free(fileinfos);
 			break;
+		case FTS_F: /* FALLTHROUGH */
+		case FTS_SL:
+			fts_set(ftsp, fs_node, FTS_SKIP);
+			break;
 		default:
 			break;
 		}
@@ -114,7 +135,7 @@ ls(int argc, char *argv[])
 		err(EXIT_FAILURE, "fts_close");
 	}
 
-	return 0;
+	return exitcode;
 }
 
 int

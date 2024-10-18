@@ -149,6 +149,9 @@ argparse(int *argc, char ***argv)
 			break;
 		case 'f': /* no sort - read dirents one by one */
 			SET(ls_config.opts, NO_SORT);
+			/* implied by -f. all entries need to be printed */
+			ls_config.dots = ALL_DOTS;
+			has_set_a = true;
 			break;
 		case 'S':
 			ls_config.sort = SIZE_SORT;

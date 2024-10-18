@@ -33,14 +33,16 @@ void ls_print(FTSENT *const, FTSENT *const);
 #define DATE_FORMAT_OLD "%b %e  %Y"
 
 typedef struct fileinfo_t {
-	FTSENT *ftsent;
+	char *name;
+	char *path;
+	struct stat *statp;
 	char *owner_name_or_id;
 	char *group_name_or_id;
 	char *block_count;
 	char *file_size;
 	devmajor_t major;
 	devminor_t minor;
-	char mode[11];
+	char mode[12];
 	bool use_rdev_nums;
 } fileinfo_t;
 
@@ -65,6 +67,13 @@ void fileinfos_free(fileinfos_t *);
 	do {                                                                   \
 		newstr = strdup(str);                                          \
 		if (newstr == NULL) {                                          \
+			err(EXIT_FAILURE, errmsg);                             \
+		}                                                              \
+	} while (/* CONSTCOND */ 0)
+
+#define ASPRINTF(errmsg, newstrptr, fmt, ...)                                  \
+	do {                                                                   \
+		if (asprintf(newstrptr, fmt, __VA_ARGS__) == -1) {             \
 			err(EXIT_FAILURE, errmsg);                             \
 		}                                                              \
 	} while (/* CONSTCOND */ 0)
