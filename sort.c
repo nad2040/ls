@@ -26,28 +26,33 @@ lexico_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 int
 time_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 {
-	time_t t1, t2;
+	int ret;
+	struct timespec ts1, ts2;
 	switch (ls_config.sort) {
 	case MTIME:
-		t1 = (*fts_ent1)->fts_statp->st_mtime;
-		t2 = (*fts_ent2)->fts_statp->st_mtime;
+		ts1 = (*fts_ent1)->fts_statp->st_mtim;
+		ts2 = (*fts_ent2)->fts_statp->st_mtim;
 		break;
 	case ATIME:
-		t1 = (*fts_ent1)->fts_statp->st_atime;
-		t2 = (*fts_ent2)->fts_statp->st_atime;
+		ts1 = (*fts_ent1)->fts_statp->st_atim;
+		ts2 = (*fts_ent2)->fts_statp->st_atim;
 		break;
 	case CTIME:
-		t1 = (*fts_ent1)->fts_statp->st_ctime;
-		t2 = (*fts_ent2)->fts_statp->st_ctime;
+		ts1 = (*fts_ent1)->fts_statp->st_ctim;
+		ts2 = (*fts_ent2)->fts_statp->st_ctim;
 		break;
 	}
-	if (t1 == t2) {
-		return lexico_sort_func(fts_ent1, fts_ent2);
+	ret = ts2.tv_sec - ts1.tv_sec;
+	if (ret == 0) {
+		ret = ts2.tv_nsec - ts1.tv_nsec;
+		if (ret == 0) {
+			return lexico_sort_func(fts_ent1, fts_ent2);
+		}
 	}
 	if (GET(ls_config.opts, REVERSE_SORT)) {
-		return (int)(t2 - t1);
+		return -ret;
 	} else {
-		return (int)(t1 - t2);
+		return ret;
 	}
 }
 
@@ -57,16 +62,18 @@ time_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 int
 size_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 {
+	int ret;
 	blksize_t s1, s2;
 	s1 = (*fts_ent1)->fts_statp->st_size;
 	s2 = (*fts_ent2)->fts_statp->st_size;
-	if (s1 == s2) {
+	ret = s2 - s1;
+	if (ret == 0) {
 		return lexico_sort_func(fts_ent1, fts_ent2);
 	}
 	if (GET(ls_config.opts, REVERSE_SORT)) {
-		return s1 - s2;
+		return -ret;
 	} else {
-		return s2 - s1;
+		return ret;
 	}
 }
 

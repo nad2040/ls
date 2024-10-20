@@ -91,6 +91,7 @@ argparse(int *argc, char ***argv)
 	default_config();
 
 	blocksize_env = get_blocksize_env();
+	ls_config.blocksize = blocksize_env;
 
 	opterr = 0;
 	while ((c = getopt(*argc, *argv, "AacdFfhiklnqRrSstuw:")) != -1) {

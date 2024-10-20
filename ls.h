@@ -30,6 +30,7 @@ void ls_print(FTSENT *const, FTSENT *const);
 typedef struct fileinfo_t {
 	char *name;
 	char *path;
+	char *accpath;
 	struct stat *statp;
 	char *owner_name_or_id;
 	char *group_name_or_id;
@@ -49,6 +50,7 @@ typedef struct fileinfos_t {
 	fileinfo_t *arr;
 	int size;
 	int cap;
+	blkcnt_t total_blocks;
 	int max_inode_len, max_blockcount_len;
 	int max_nlink_len;
 	int max_owner_name_or_id_len, max_group_name_or_id_len;

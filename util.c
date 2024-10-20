@@ -1,11 +1,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <fcntl.h>
 #include <grp.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "ls.h"
@@ -78,7 +80,7 @@ print_filetype_char(fileinfo_t fileinfo)
 		putchar('/');
 		break;
 	default:
-		if ((fileinfo.statp->st_mode & S_ISEXEC) > 0) {
+		if (GET(fileinfo.statp->st_mode, S_ISEXEC)) {
 			putchar('*');
 		}
 	}
@@ -94,8 +96,7 @@ is_older_than_6months(const struct tm tm)
 	time_t now;
 	struct tm *current;
 
-	now = time(NULL);
-	if (now == -1) {
+	if ((now = time(NULL)) == -1) {
 		err(EXIT_FAILURE, "failed to get time");
 	}
 
@@ -113,14 +114,14 @@ is_older_than_6months(const struct tm tm)
  * using strftime.
  */
 void
-print_file_time(fileinfo_t fileinfo, int max_time_or_year_len)
+print_file_time(fileinfo_t fileinfo)
 {
 	int total_len;
 	size_t size;
 	char *buf;
 
-	/* 7 for month and day and spaces + max_len + 1 for nul */
-	total_len = 7 + max_time_or_year_len + 1;
+	/* 7 for month and day and spaces + 5 for date/time + 1 for nul */
+	total_len = 13;
 	buf = calloc(1, total_len);
 	if (buf == NULL) {
 		err(EXIT_FAILURE, "failed to allocate buffer for strftime");
@@ -144,16 +145,29 @@ print_file_time(fileinfo_t fileinfo, int max_time_or_year_len)
 void
 print_symlink_dest(fileinfo_t fileinfo)
 {
-	char link_dest[PATH_MAX];
+	int fd;
 	ssize_t len;
+	char *link_path;
+	char link_dest[PATH_MAX];
 
 	printf("\ncwd: %s\n", getcwd(NULL, 0));
 	printf("path: %s\n", fileinfo.path);
+	printf("accpath: %s\n", fileinfo.accpath);
 	printf("name: %s\n", fileinfo.name);
-	if ((len = readlink(fileinfo.path, link_dest, sizeof(link_dest) - 1)) ==
-	    -1) {
-		err(EXIT_FAILURE, "readlink %s", fileinfo.name);
+
+	if ((fd = open(fileinfo.path, O_RDONLY | O_EXCL)) < 0) {
+		err(EXIT_FAILURE, "couldn't open fts_path for symlink");
 	}
+
+
+	ASPRINTF("couldn't alloc string for symlink path",
+		 &link_path, "%s/%s", fileinfo.path, fileinfo.accpath);
+	if ((len = readlinkat(fd, fileinfo.accpath, link_dest, sizeof(link_dest) - 1)) ==
+	    -1) {
+		err(EXIT_FAILURE, "readlink %s", link_path);
+	}
+
+	(void)close(fd);
 	link_dest[len] = '\0';
 
 	printf(" -> %s", link_dest);
@@ -174,6 +188,10 @@ print_fileinfos(fileinfos_t *fileinfos)
 	show_inodes = GET(ls_config.opts, SHOW_INODES);
 	show_blkcount = GET(ls_config.opts, SHOW_BLKCOUNT);
 	show_filetype_sym = GET(ls_config.opts, SHOW_FILETYPE_SYM);
+
+	if (long_format && fileinfos->size > 0) {
+		printf("total %ld\n", fileinfos->total_blocks);
+	}
 
 	for (i = 0; i < fileinfos->size; ++i) {
 		fileinfo = fileinfos->arr[i];
@@ -207,8 +225,7 @@ print_fileinfos(fileinfos_t *fileinfos)
 				       fileinfos->max_size_or_rdev_nums_len,
 				       fileinfo.file_size);
 			}
-			print_file_time(fileinfo,
-			                fileinfos->max_time_or_year_len);
+			print_file_time(fileinfo);
 		}
 		print_raw_or_not(fileinfo.name);
 		if (show_filetype_sym) {
@@ -319,6 +336,9 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 		fileinfo.path = trav->fts_path;
 		fileinfo.statp = trav->fts_statp;
 
+		ASPRINTF("couldn't alloc string for accpath",
+			 &fileinfo.accpath, "%s", trav->fts_accpath);
+
 		uid = trav->fts_statp->st_uid;
 		if ((pwd = getpwuid(uid)) == NULL ||
 		    GET(ls_config.opts, SHOW_ID_ONLY)) {
@@ -343,13 +363,14 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 		file_size = trav->fts_statp->st_size;
 
 		if (ls_config.blkcount_fmt == HUMAN_READABLE) {
-			block_count *= 500;
+			block_count *= 512;
 			fileinfo.block_count =
 			    human_readable_size_from(block_count);
 			fileinfo.file_size =
 			    human_readable_size_from(file_size);
 		} else {
 			block_count = (block_count * 512) / ls_config.blocksize;
+			fileinfos->total_blocks += block_count;
 			ASPRINTF("couldn't alloc string for block count",
 			         &fileinfo.block_count, "%ld", block_count);
 			ASPRINTF("couldn't alloc string for file size",
@@ -449,6 +470,7 @@ fileinfos_free(fileinfos_t *fileinfos)
 	for (i = 0; i < fileinfos->size; ++i) {
 		free(fileinfos->arr[i].file_size);
 		free(fileinfos->arr[i].block_count);
+		free(fileinfos->arr[i].accpath);
 		free(fileinfos->arr[i].owner_name_or_id);
 		free(fileinfos->arr[i].group_name_or_id);
 	}

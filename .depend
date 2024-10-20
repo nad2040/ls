@@ -108,11 +108,11 @@ util.o: util.c /usr/include/sys/stat.h /usr/include/sys/featuretest.h \
  /usr/include/sys/timespec.h /usr/include/sys/select.h \
  /usr/include/sys/sigtypes.h /usr/include/time.h /usr/include/sys/null.h \
  /usr/include/sys/idtype.h /usr/include/grp.h /usr/include/pwd.h \
- /usr/include/stdlib.h config.h /usr/include/ctype.h \
+ /usr/include/stdio.h /usr/include/stdlib.h config.h /usr/include/ctype.h \
  /usr/include/sys/ctype_inline.h /usr/include/sys/ctype_bits.h \
  /usr/include/err.h /usr/include/stdarg.h /usr/include/errno.h \
  /usr/include/sys/errno.h /usr/include/fts.h /usr/include/limits.h \
  /usr/include/machine/limits.h /usr/include/arm/limits.h \
  /usr/include/sys/syslimits.h /usr/include/stdbool.h \
  /usr/include/string.h /usr/include/strings.h /usr/include/unistd.h \
- /usr/include/sys/unistd.h ls.h /usr/include/stdio.h
+ /usr/include/sys/unistd.h ls.h

@@ -1,8 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Werror -Wextra -Wpedantic -Wshadow -Wformat=2 -Wjump-misses-init -Wlogical-op
 CFLAGS += -std=c99 -g
-CFLAGS += -lutil
-LIBFLAGS=-l
+LDFLAGS = -lutil
 PROG=ls
 OBJS=ls.o config.o sort.o util.o
 

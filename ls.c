@@ -6,9 +6,12 @@
 #include "config.h"
 #include "sort.h"
 
-
 extern config_t ls_config;
 
+/*
+ * Main ls function that uses FTS to traverse the filesystem and
+ * return the children nodes at preorder traversal of directories.
+ */
 int
 ls(int argc, char *argv[])
 {
@@ -40,12 +43,6 @@ ls(int argc, char *argv[])
 	}
 
 	exitcode = EXIT_SUCCESS;
-
-	/* TODO:
-	 * Fix the sort function for the first iteration to first sort by
-	 * directory or non-directory, and then by the sort function determined
-	 * by config. refactor sort_func and max_depth into config struct
-	 */
 
 	/* manual doesn't explicitly state NULL is returned, so check errno as
 	 * well */
@@ -141,7 +138,5 @@ main(int argc, char *argv[])
 
 	argparse(&argc, &argv);
 
-	(void)ls(argc, argv);
-
-	return 0;
+	return ls(argc, argv);
 }
