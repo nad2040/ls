@@ -15,12 +15,6 @@
 #ifndef _LS_H_
 #define _LS_H_
 
-typedef int (*FTSENT_COMPARE)(const FTSENT **, const FTSENT **);
-
-int lexico_sort_func(const FTSENT **, const FTSENT **);
-int time_sort_func(const FTSENT **, const FTSENT **);
-int size_sort_func(const FTSENT **, const FTSENT **);
-
 void print_raw_or_not(const char *);
 void ls_print(FTSENT *const, FTSENT *const);
 
@@ -29,8 +23,9 @@ void ls_print(FTSENT *const, FTSENT *const);
 #define F_SYMLINK = "@";
 #define F_PIPE = "|";
 
-#define DATE_FORMAT_NEW "%b %e %H:%M"
-#define DATE_FORMAT_OLD "%b %e  %Y"
+#define DATE_FORMAT "%b %e "
+#define TIME_FORMAT "%H:%M"
+#define YEAR_FORMAT "%Y"
 
 typedef struct fileinfo_t {
 	char *name;
@@ -43,7 +38,9 @@ typedef struct fileinfo_t {
 	devmajor_t major;
 	devminor_t minor;
 	char mode[12];
+	struct tm time;
 	bool use_rdev_nums;
+	bool older_than_6months;
 } fileinfo_t;
 
 #define INIT_CAP 10
@@ -57,9 +54,10 @@ typedef struct fileinfos_t {
 	int max_owner_name_or_id_len, max_group_name_or_id_len;
 	int max_file_size_len, max_rdev_nums_len, max_size_or_rdev_nums_len;
 	int max_major_len, max_minor_len;
+	int max_time_or_year_len;
 } fileinfos_t;
 
-fileinfos_t *fileinfos_from_ftsents(FTSENT *);
+fileinfos_t *fileinfos_from_ftsents(FTSENT *, bool, bool, bool);
 void print_fileinfos(fileinfos_t *);
 void fileinfos_free(fileinfos_t *);
 

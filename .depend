@@ -19,14 +19,14 @@ config.o: config.c config.h /usr/include/sys/types.h \
  /usr/include/pthread_types.h /usr/include/ctype.h \
  /usr/include/sys/ctype_inline.h /usr/include/sys/ctype_bits.h \
  /usr/include/err.h /usr/include/stdarg.h /usr/include/errno.h \
- /usr/include/sys/errno.h /usr/include/limits.h \
+ /usr/include/sys/errno.h /usr/include/fts.h /usr/include/limits.h \
  /usr/include/machine/limits.h /usr/include/arm/limits.h \
  /usr/include/sys/syslimits.h /usr/include/stdbool.h \
  /usr/include/stdlib.h /usr/include/sys/null.h /usr/include/string.h \
  /usr/include/strings.h /usr/include/time.h /usr/include/sys/timespec.h \
  /usr/include/sys/time.h /usr/include/sys/select.h \
  /usr/include/sys/sigtypes.h /usr/include/sys/idtype.h \
- /usr/include/unistd.h /usr/include/sys/unistd.h
+ /usr/include/unistd.h /usr/include/sys/unistd.h sort.h
 ls.o: ls.c ls.h /usr/include/sys/stat.h /usr/include/sys/featuretest.h \
  /usr/include/sys/types.h /usr/include/machine/types.h \
  /usr/include/sys/cdefs.h /usr/include/machine/cdefs.h \
@@ -55,8 +55,9 @@ ls.o: ls.c ls.h /usr/include/sys/stat.h /usr/include/sys/featuretest.h \
  /usr/include/machine/limits.h /usr/include/arm/limits.h \
  /usr/include/sys/syslimits.h /usr/include/stdbool.h /usr/include/stdio.h \
  /usr/include/stdlib.h /usr/include/string.h /usr/include/strings.h \
- /usr/include/unistd.h /usr/include/sys/unistd.h config.h
-sort.o: sort.c config.h /usr/include/sys/types.h \
+ /usr/include/unistd.h /usr/include/sys/unistd.h /usr/include/stdint.h \
+ config.h sort.h
+sort.o: sort.c sort.h /usr/include/sys/types.h \
  /usr/include/sys/featuretest.h /usr/include/machine/types.h \
  /usr/include/sys/cdefs.h /usr/include/machine/cdefs.h \
  /usr/include/arm/cdefs.h /usr/include/sys/cdefs_elf.h \
@@ -74,18 +75,17 @@ sort.o: sort.c config.h /usr/include/sys/types.h \
  /usr/include/sys/common_int_limits.h /usr/include/machine/int_const.h \
  /usr/include/arm/int_const.h /usr/include/machine/wchar_limits.h \
  /usr/include/arm/wchar_limits.h /usr/include/sys/fd_set.h \
- /usr/include/pthread_types.h /usr/include/ctype.h \
- /usr/include/sys/ctype_inline.h /usr/include/sys/ctype_bits.h \
- /usr/include/err.h /usr/include/stdarg.h /usr/include/errno.h \
- /usr/include/sys/errno.h /usr/include/limits.h \
+ /usr/include/pthread_types.h /usr/include/fts.h /usr/include/sys/stat.h \
+ /usr/include/sys/time.h /usr/include/sys/timespec.h \
+ /usr/include/sys/select.h /usr/include/sys/sigtypes.h \
+ /usr/include/time.h /usr/include/sys/null.h /usr/include/sys/idtype.h \
+ config.h /usr/include/ctype.h /usr/include/sys/ctype_inline.h \
+ /usr/include/sys/ctype_bits.h /usr/include/err.h /usr/include/stdarg.h \
+ /usr/include/errno.h /usr/include/sys/errno.h /usr/include/limits.h \
  /usr/include/machine/limits.h /usr/include/arm/limits.h \
  /usr/include/sys/syslimits.h /usr/include/stdbool.h \
- /usr/include/stdlib.h /usr/include/sys/null.h /usr/include/string.h \
- /usr/include/strings.h /usr/include/time.h /usr/include/sys/timespec.h \
- /usr/include/sys/time.h /usr/include/sys/select.h \
- /usr/include/sys/sigtypes.h /usr/include/sys/idtype.h \
- /usr/include/unistd.h /usr/include/sys/unistd.h ls.h \
- /usr/include/sys/stat.h /usr/include/fts.h /usr/include/stdio.h
+ /usr/include/stdlib.h /usr/include/string.h /usr/include/strings.h \
+ /usr/include/unistd.h /usr/include/sys/unistd.h
 util.o: util.c /usr/include/sys/stat.h /usr/include/sys/featuretest.h \
  /usr/include/sys/types.h /usr/include/machine/types.h \
  /usr/include/sys/cdefs.h /usr/include/machine/cdefs.h \
@@ -111,8 +111,8 @@ util.o: util.c /usr/include/sys/stat.h /usr/include/sys/featuretest.h \
  /usr/include/stdlib.h config.h /usr/include/ctype.h \
  /usr/include/sys/ctype_inline.h /usr/include/sys/ctype_bits.h \
  /usr/include/err.h /usr/include/stdarg.h /usr/include/errno.h \
- /usr/include/sys/errno.h /usr/include/limits.h \
+ /usr/include/sys/errno.h /usr/include/fts.h /usr/include/limits.h \
  /usr/include/machine/limits.h /usr/include/arm/limits.h \
  /usr/include/sys/syslimits.h /usr/include/stdbool.h \
  /usr/include/string.h /usr/include/strings.h /usr/include/unistd.h \
- /usr/include/sys/unistd.h ls.h /usr/include/fts.h /usr/include/stdio.h
+ /usr/include/sys/unistd.h ls.h /usr/include/stdio.h

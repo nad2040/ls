@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "config.h"
+#include "sort.h"
 
 
 extern config_t ls_config;
@@ -11,17 +12,19 @@ extern config_t ls_config;
 int
 ls(int argc, char *argv[])
 {
+	bool did_previously_print;
+	bool more_than_one_dir;
 	uint8_t exitcode;
 	int fts_open_options;
-	int max_depth;
 	int ignore_trailing_slash_len;
 	char *dot_argv[2];
 	char **path_argv;
-	FTSENT_COMPARE sort_func;
 	FTS *ftsp;
 	FTSENT *fs_node;
 	FTSENT *children;
 	fileinfos_t *fileinfos;
+	fileinfos_t *fileinfos_nondir;
+	fileinfos_t *fileinfos_dir;
 
 	if (argc == 0) {
 		dot_argv[0] = ".";
@@ -36,57 +39,46 @@ ls(int argc, char *argv[])
 		fts_open_options |= FTS_SEEDOT;
 	}
 
-	switch (ls_config.sort) {
-	case LEXICO_SORT:
-		sort_func = lexico_sort_func;
-		break;
-	case TIME_SORT:
-		sort_func = time_sort_func;
-		break;
-	case SIZE_SORT:
-		sort_func = size_sort_func;
-		break;
-	}
-
-	/* the -f flag overrides any sorting options. */
-	if (GET(ls_config.opts, NO_SORT)) {
-		sort_func = NULL;
-	}
-
-	switch (ls_config.recurse) {
-	case NO_DEPTH:
-		max_depth = -1;
-		break;
-	case NORMAL_DEPTH:
-		max_depth = 0;
-		break;
-	case FULL_DEPTH:
-		max_depth = INT_MAX;
-		break;
-	}
-
 	exitcode = EXIT_SUCCESS;
 
 	/* TODO:
-	 * Fix the sort function for the first iteration to first sort by directory
-	 * or non-directory, and then by the sort function determined by config.
-	 * refactor sort_func and max_depth into config struct
+	 * Fix the sort function for the first iteration to first sort by
+	 * directory or non-directory, and then by the sort function determined
+	 * by config. refactor sort_func and max_depth into config struct
 	 */
 
 	/* manual doesn't explicitly state NULL is returned, so check errno as
 	 * well */
 	errno = 0;
-	if ((ftsp = fts_open(path_argv, fts_open_options, sort_func)) == NULL ||
+	if ((ftsp = fts_open(path_argv, fts_open_options, initial_sort_func)) == NULL ||
 	    errno != 0) {
 		printf("ftsp = %p\nerrno = %d\n", (void *)ftsp, errno);
 		err(EXIT_FAILURE, "fts_open");
 	}
 
+	did_previously_print = false;
+	more_than_one_dir = false;
+
+	children = fts_children(ftsp, 0);
+	fileinfos_nondir = fileinfos_from_ftsents(children, true, false, true);
+	if (fileinfos_nondir->size > 0) {
+		did_previously_print = true;
+	}
+	print_fileinfos(fileinfos_nondir);
+	fileinfos_free(fileinfos_nondir);
+
+	fileinfos_dir = fileinfos_from_ftsents(children, false, true, false);
+	if (fileinfos_dir->size > 1) {
+		more_than_one_dir = true;
+	}
+	fileinfos_free(fileinfos_dir);
+
+	ftsp->fts_compar = ls_config.compare;
+
 	while ((fs_node = fts_read(ftsp)) != NULL) {
-		if (fs_node->fts_level > max_depth || fs_node->fts_level < 0) {
+		if (fs_node->fts_level > ls_config.max_depth || fs_node->fts_level < 0) {
 			/* printf("Skipping %s at level %d\n",
 			 * fs_node->fts_path, fs_node->fts_level); */
-
 			fts_set(ftsp, fs_node, FTS_SKIP);
 			continue;
 		}
@@ -96,14 +88,19 @@ ls(int argc, char *argv[])
 		case FTS_ERR: /* FALLTHROUGH */
 		case FTS_NS:  /* FALLTHROUGH */
 		case FTS_NSOK:
-			errno = fs_node->fts_errno;
-			warn("%s", fs_node->fts_name);
 			exitcode = EXIT_FAILURE;
 			break;
 		case FTS_D:
+			if (ls_config.dots == NO_DOTS && fs_node->fts_name[0] == '.' && fs_node->fts_level > 0) {
+				fts_set(ftsp, fs_node, FTS_SKIP);
+				continue;
+			}
+			if (did_previously_print) {
+				putchar('\n');
+			}
 			children = fts_children(ftsp, 0);
-			if (ls_config.recurse == FULL_DEPTH &&
-			    fs_node->fts_level > 0) {
+			if ((ls_config.recurse == FULL_DEPTH && fs_node->fts_level > 0)
+				|| did_previously_print || more_than_one_dir) {
 				/* don't print trailing '/' like ls */
 				ignore_trailing_slash_len =
 				    (int)strlen(fs_node->fts_path) - 1;
@@ -112,16 +109,15 @@ ls(int argc, char *argv[])
 				    '/') {
 					ignore_trailing_slash_len++;
 				}
-				printf("\n%.*s:\n", ignore_trailing_slash_len,
+				printf("%.*s:\n", ignore_trailing_slash_len,
 				       fs_node->fts_path);
 			}
-			fileinfos = fileinfos_from_ftsents(children);
+			fileinfos = fileinfos_from_ftsents(children, false, false, true);
 			print_fileinfos(fileinfos);
 			fileinfos_free(fileinfos);
-			break;
-		case FTS_F: /* FALLTHROUGH */
-		case FTS_SL:
-			fts_set(ftsp, fs_node, FTS_SKIP);
+			if (!did_previously_print) {
+				did_previously_print = true;
+			}
 			break;
 		default:
 			break;

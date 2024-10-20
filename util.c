@@ -3,7 +3,9 @@
 
 #include <grp.h>
 #include <pwd.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "config.h"
 #include "ls.h"
@@ -83,6 +85,60 @@ print_filetype_char(fileinfo_t fileinfo)
 }
 
 /*
+ * Compares current time to time tm which is also in local time.
+ * returns true if the time is more than 6 months away.
+ */
+bool
+is_older_than_6months(const struct tm tm)
+{
+	time_t now;
+	struct tm *current;
+
+	now = time(NULL);
+	if (now == -1) {
+		err(EXIT_FAILURE, "failed to get time");
+	}
+
+	if ((current = localtime(&now)) == NULL) {
+		err(EXIT_FAILURE, "failed to acquire localtime");
+	}
+
+	return (current->tm_year - tm.tm_year) * 12 +
+	           (current->tm_mon - tm.tm_mon) >=
+	       6;
+}
+
+/*
+ * Returns heap-allocated string with correct time based on config
+ * using strftime.
+ */
+void
+print_file_time(fileinfo_t fileinfo, int max_time_or_year_len)
+{
+	int total_len;
+	size_t size;
+	char *buf;
+
+	/* 7 for month and day and spaces + max_len + 1 for nul */
+	total_len = 7 + max_time_or_year_len + 1;
+	buf = calloc(1, total_len);
+	if (buf == NULL) {
+		err(EXIT_FAILURE, "failed to allocate buffer for strftime");
+	}
+	if (fileinfo.older_than_6months) {
+		size = strftime(buf, total_len, DATE_FORMAT " " YEAR_FORMAT,
+		                &fileinfo.time);
+	} else {
+		size = strftime(buf, total_len, DATE_FORMAT TIME_FORMAT,
+		                &fileinfo.time);
+	}
+	if (size == 0) {
+		errx(EXIT_FAILURE, "strftime exceeded buffer");
+	}
+	printf("%s ", buf);
+}
+
+/*
  * Prints symlink destination assuming the destination is shorter than PATH_MAX
  */
 void
@@ -151,10 +207,8 @@ print_fileinfos(fileinfos_t *fileinfos)
 				       fileinfos->max_size_or_rdev_nums_len,
 				       fileinfo.file_size);
 			}
-			/*
-			 * TODO: Print correct time based on config. make a
-			 * function also need to use correct timezone.
-			 */
+			print_file_time(fileinfo,
+			                fileinfos->max_time_or_year_len);
 		}
 		print_raw_or_not(fileinfo.name);
 		if (show_filetype_sym) {
@@ -209,7 +263,8 @@ human_readable_size_from(unsigned long size)
  * determined dynamically
  */
 fileinfos_t *
-fileinfos_from_ftsents(FTSENT *trav)
+fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
+                       bool show_warn)
 {
 	uid_t uid;
 	gid_t gid;
@@ -217,6 +272,7 @@ fileinfos_from_ftsents(FTSENT *trav)
 	dev_t rdev;
 	blkcnt_t block_count;
 	off_t file_size;
+	time_t time;
 	struct passwd *pwd;
 	struct group *grp;
 
@@ -228,7 +284,19 @@ fileinfos_from_ftsents(FTSENT *trav)
 	}
 
 	while (trav != NULL) {
-		if (ls_config.dots == NO_DOTS && trav->fts_name[0] == '.') {
+		if (trav->fts_errno != 0) {
+			if (show_warn) {
+				errno = trav->fts_errno;
+				warn("%s", trav->fts_name);
+			}
+			trav = trav->fts_link;
+			continue;
+		}
+
+		if ((non_dir_only && S_ISDIR(trav->fts_statp->st_mode)) ||
+		    (dir_only && !S_ISDIR(trav->fts_statp->st_mode)) ||
+		    (ls_config.dots == NO_DOTS && trav->fts_name[0] == '.' &&
+		     !non_dir_only && !dir_only)) {
 			trav = trav->fts_link;
 			continue;
 		}
@@ -297,9 +365,29 @@ fileinfos_from_ftsents(FTSENT *trav)
 			rdev = trav->fts_statp->st_rdev;
 			fileinfo.major = major(rdev);
 			fileinfo.minor = minor(rdev);
+		} else {
+			fileinfo.major = 0;
+			fileinfo.minor = 0;
 		}
 
 		strmode(mode, fileinfo.mode);
+
+		switch (ls_config.time) {
+		case ATIME:
+			time = fileinfo.statp->st_atime;
+			break;
+		case MTIME:
+			time = fileinfo.statp->st_mtime;
+			break;
+		case CTIME:
+			time = fileinfo.statp->st_ctime;
+			break;
+		}
+		if (localtime_r(&time, &fileinfo.time) == NULL) {
+			err(EXIT_FAILURE, "failed to acquire localtime");
+		}
+
+		fileinfo.older_than_6months = is_older_than_6months(fileinfo.time);
 
 		fileinfos->arr[fileinfos->size++] = fileinfo;
 
@@ -333,6 +421,15 @@ fileinfos_from_ftsents(FTSENT *trav)
 		    max(fileinfos->max_size_or_rdev_nums_len,
 		        max(fileinfos->max_file_size_len,
 		            fileinfos->max_rdev_nums_len));
+
+		if (fileinfo.older_than_6months) {
+			fileinfos->max_time_or_year_len =
+			    max(fileinfos->max_time_or_year_len,
+			        count_digits(1900 + fileinfo.time.tm_year));
+		} else {
+			fileinfos->max_time_or_year_len =
+			    max(fileinfos->max_time_or_year_len, 5);
+		}
 
 		trav = trav->fts_link;
 	}

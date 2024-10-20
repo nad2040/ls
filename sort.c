@@ -1,5 +1,8 @@
+#include "sort.h"
+
+#include <sys/stat.h>
+
 #include "config.h"
-#include "ls.h"
 
 extern config_t ls_config;
 
@@ -9,7 +12,12 @@ extern config_t ls_config;
 int
 lexico_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 {
-	return strcmp((*fts_ent1)->fts_name, (*fts_ent2)->fts_name);
+	int cmp = strcmp((*fts_ent1)->fts_name, (*fts_ent2)->fts_name);
+	if (GET(ls_config.opts, REVERSE_SORT)) {
+		return -cmp;
+	} else {
+		return cmp;
+	}
 }
 
 /*
@@ -36,7 +44,11 @@ time_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 	if (t1 == t2) {
 		return lexico_sort_func(fts_ent1, fts_ent2);
 	}
-	return t1 - t2;
+	if (GET(ls_config.opts, REVERSE_SORT)) {
+		return (int)(t2 - t1);
+	} else {
+		return (int)(t1 - t2);
+	}
 }
 
 /*
@@ -51,5 +63,32 @@ size_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 	if (s1 == s2) {
 		return lexico_sort_func(fts_ent1, fts_ent2);
 	}
-	return s2 - s1;
+	if (GET(ls_config.opts, REVERSE_SORT)) {
+		return s1 - s2;
+	} else {
+		return s2 - s1;
+	}
+}
+
+/*
+ * Initially sort by directory
+ */
+int
+initial_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
+{
+	int e1, e2;
+	if (S_ISDIR((*fts_ent1)->fts_statp->st_mode)) {
+		e1 = 1;
+	} else {
+		e1 = 0;
+	}
+	if (S_ISDIR((*fts_ent2)->fts_statp->st_mode)) {
+		e2 = 1;
+	} else {
+		e2 = 0;
+	}
+	if (e1 == e2 && ls_config.compare != NULL) {
+		return ls_config.compare(fts_ent1, fts_ent2);
+	}
+	return e1 - e2;
 }

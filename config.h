@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <fts.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -70,6 +71,8 @@ typedef struct config_t {
 	sort_opt sort;
 	blkcount_fmt_opt blkcount_fmt;
 	blksize_t blocksize;
+	int max_depth;
+	int (*compare)(const FTSENT **, const FTSENT **);
 } config_t;
 
 void argparse(int *, char ***);

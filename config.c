@@ -1,4 +1,5 @@
 #include "config.h"
+#include "sort.h"
 
 #include <stdlib.h>
 
@@ -34,8 +35,6 @@ default_config(void)
 	} else {
 		err(EXIT_FAILURE, "isatty");
 	}
-
-	tzset();
 }
 
 /*
@@ -158,8 +157,7 @@ argparse(int *argc, char ***argv)
 			break;
 			/* time flags */
 		case 't':
-			SET(ls_config.opts,
-			    TIME_SORT); /* only -t enables sorting by time */
+			ls_config.sort = TIME_SORT; /* only -t enables sorting by time */
 			ls_config.time = MTIME;
 			break;
 		case 'u':
@@ -189,4 +187,33 @@ argparse(int *argc, char ***argv)
 	}
 	*argc -= optind;
 	*argv += optind;
+
+	switch (ls_config.sort) {
+	case LEXICO_SORT:
+		ls_config.compare = lexico_sort_func;
+		break;
+	case TIME_SORT:
+		ls_config.compare = time_sort_func;
+		break;
+	case SIZE_SORT:
+		ls_config.compare = size_sort_func;
+		break;
+	}
+
+	/* the -f flag overrides any sorting options. */
+	if (GET(ls_config.opts, NO_SORT)) {
+		ls_config.compare = NULL;
+	}
+
+	switch (ls_config.recurse) {
+	case NO_DEPTH:
+		ls_config.max_depth = -1;
+		break;
+	case NORMAL_DEPTH:
+		ls_config.max_depth = 0;
+		break;
+	case FULL_DEPTH:
+		ls_config.max_depth = INT_MAX;
+		break;
+	}
 }
