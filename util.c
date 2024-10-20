@@ -189,7 +189,7 @@ print_fileinfos(fileinfos_t *fileinfos)
 	show_blkcount = GET(ls_config.opts, SHOW_BLKCOUNT);
 	show_filetype_sym = GET(ls_config.opts, SHOW_FILETYPE_SYM);
 
-	if (long_format && fileinfos->size > 0) {
+	if ((long_format || show_blkcount) && fileinfos->size > 0) {
 		printf("total %ld\n", fileinfos->total_blocks);
 	}
 
