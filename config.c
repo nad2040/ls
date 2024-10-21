@@ -61,7 +61,7 @@ argparse(int *argc, char ***argv)
 	long blocksize_env;
 	char *bsize;
 
-	memset(&ls_config, 0, sizeof(config_t));
+	(void)memset(&ls_config, 0, sizeof(config_t));
 
 	default_config();
 
@@ -156,7 +156,7 @@ argparse(int *argc, char ***argv)
 			} else {
 				warnx("unknown option -- \\x%x", optopt);
 			}
-			fprintf(stderr,
+			(void)fprintf(stderr,
 			        "usage: %s [-AacdFfhiklnqRrSstuw] [file ...]\n",
 			        getprogname());
 			exit(EXIT_FAILURE);

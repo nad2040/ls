@@ -105,7 +105,7 @@ ls(int argc, char *argv[])
 				continue;
 			}
 			if (did_previously_print) {
-				putchar('\n');
+				(void)putchar('\n');
 			}
 			children = fts_children(ftsp, 0);
 			if ((ls_config.recurse == FULL_DEPTH &&
@@ -121,7 +121,7 @@ ls(int argc, char *argv[])
 				    ignore_trailing_slash_len == 0) {
 					ignore_trailing_slash_len++;
 				}
-				printf("%.*s:\n", ignore_trailing_slash_len,
+				(void)printf("%.*s:\n", ignore_trailing_slash_len,
 				       fs_node->fts_path);
 			}
 			fileinfos = fileinfos_from_ftsents(children, false,

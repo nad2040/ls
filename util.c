@@ -71,11 +71,11 @@ print_raw_or_not(const char *str)
 	for (i = 0; i < (int)strlen(str); ++i) {
 		c = str[i];
 		if (isprint(c)) {
-			putchar(c);
+			(void)putchar(c);
 		} else if (GET(ls_config.opts, RAW_PRINT)) {
-			putchar(c);
+			(void)putchar(c);
 		} else {
-			putchar('?');
+			(void)putchar('?');
 		}
 	}
 }
@@ -94,17 +94,17 @@ print_filetype_char(fileinfo_t fileinfo)
 {
 	switch (fileinfo.mode[0]) {
 	case 'l':
-		putchar(F_SYMLINK);
+		(void)putchar(F_SYMLINK);
 		break;
 	case 'p':
-		putchar(F_PIPE);
+		(void)putchar(F_PIPE);
 		break;
 	case 'd':
-		putchar(F_DIRECTORY);
+		(void)putchar(F_DIRECTORY);
 		break;
 	default:
 		if (GET(fileinfo.statp->st_mode, S_ISEXEC)) {
-			putchar(F_EXECUTABLE);
+			(void)putchar(F_EXECUTABLE);
 		}
 	}
 }
@@ -189,7 +189,7 @@ print_file_time(fileinfo_t fileinfo)
 	if (size == 0) {
 		errx(EXIT_FAILURE, "strftime exceeded buffer");
 	}
-	printf("%s ", buf);
+	(void)printf("%s ", buf);
 }
 
 /*
@@ -208,7 +208,7 @@ print_symlink_dest(fileinfo_t fileinfo)
 		warn("%s", link_path);
 	}
 	link_dest[len] = '\0';
-	printf(" -> %s", link_dest);
+	(void)printf(" -> %s", link_dest);
 }
 
 /*
@@ -232,10 +232,10 @@ print_fileinfos(fileinfos_t *fileinfos)
 	if ((long_format || (show_blkcount && ls_config.istty)) &&
 	    fileinfos->size > 0) {
 		if (human_readable) {
-			printf("total %s\n", human_readable_size_from(
+			(void)printf("total %s\n", human_readable_size_from(
 						 fileinfos->total_size, 0));
 		} else {
-			printf("total %ld\n", (fileinfos->total_blocks * 512 +
+			(void)printf("total %ld\n", (fileinfos->total_blocks * 512 +
 			                       ls_config.blocksize - 1) /
 			                          ls_config.blocksize);
 		}
@@ -244,28 +244,28 @@ print_fileinfos(fileinfos_t *fileinfos)
 	for (i = 0; i < fileinfos->size; ++i) {
 		fileinfo = fileinfos->arr[i];
 		if (show_inodes) {
-			printf("%.*ld ", fileinfos->max_inode_len,
+			(void)printf("%.*ld ", fileinfos->max_inode_len,
 			       fileinfo.statp->st_ino);
 		}
 		if (show_blkcount) {
 			if (human_readable && !long_format) {
-				printf("%*s ", fileinfos->max_file_size_len,
+				(void)printf("%*s ", fileinfos->max_file_size_len,
 				       fileinfo.file_size);
 			} else {
-				printf("%*s ", fileinfos->max_blockcount_len,
+				(void)printf("%*s ", fileinfos->max_blockcount_len,
 				       fileinfo.block_count);
 			}
 		}
 		if (long_format) {
-			printf("%s ", fileinfos->arr[i].mode);
-			printf("%*d ", fileinfos->max_nlink_len,
+			(void)printf("%s ", fileinfos->arr[i].mode);
+			(void)printf("%*d ", fileinfos->max_nlink_len,
 			       fileinfo.statp->st_nlink);
-			printf("%-*s  ", fileinfos->max_owner_name_or_id_len,
+			(void)printf("%-*s  ", fileinfos->max_owner_name_or_id_len,
 			       fileinfo.owner_name_or_id);
-			printf("%-*s  ", fileinfos->max_group_name_or_id_len,
+			(void)printf("%-*s  ", fileinfos->max_group_name_or_id_len,
 			       fileinfo.group_name_or_id);
 			if (fileinfo.use_rdev_nums) {
-				printf("%*s%*d, %*d ",
+				(void)printf("%*s%*d, %*d ",
 				       fileinfos->max_size_or_rdev_nums_len -
 				           fileinfos->max_rdev_nums_len,
 				       "", /* print appropriate padding if the
@@ -274,7 +274,7 @@ print_fileinfos(fileinfos_t *fileinfos)
 				       fileinfos->max_minor_len,
 				       fileinfo.minor);
 			} else {
-				printf("%*s ",
+				(void)printf("%*s ",
 				       fileinfos->max_size_or_rdev_nums_len,
 				       fileinfo.file_size);
 			}
@@ -289,7 +289,7 @@ print_fileinfos(fileinfos_t *fileinfos)
 				print_symlink_dest(fileinfo);
 			}
 		}
-		putchar('\n');
+		(void)putchar('\n');
 	}
 }
 
