@@ -1,15 +1,7 @@
 #include <sys/types.h>
 
-#include <ctype.h>
-#include <err.h>
-#include <errno.h>
 #include <fts.h>
-#include <limits.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
 
 #ifndef _CONFIG_H_
 #define _CONFIG_H_

@@ -1,31 +1,14 @@
-#include <sys/stat.h>
 #include <sys/types.h>
 
-#include <ctype.h>
 #include <err.h>
-#include <errno.h>
 #include <fts.h>
-#include <limits.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <time.h>
 
 #ifndef _LS_H_
 #define _LS_H_
-
-void print_raw_or_not(const char *);
-void ls_print(FTSENT *const, FTSENT *const);
-
-#define F_EXECUTABLE = "*";
-#define F_DIRECTORY = "/";
-#define F_SYMLINK = "@";
-#define F_PIPE = "|";
-
-#define DATE_FORMAT "%b %e "
-#define TIME_FORMAT "%H:%M"
-#define YEAR_FORMAT "%Y"
 
 typedef struct fileinfo_t {
 	char *name;

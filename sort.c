@@ -2,6 +2,8 @@
 
 #include <sys/stat.h>
 
+#include <string.h>
+
 #include "config.h"
 
 extern config_t ls_config;

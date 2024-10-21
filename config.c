@@ -1,11 +1,19 @@
 #include "config.h"
 
+#include <ctype.h>
+#include <err.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "sort.h"
 
 config_t ls_config;
+
+void default_config(void);
 
 /*
  * Set the default options for the ls_config following the manpage.

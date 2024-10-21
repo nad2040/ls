@@ -1,8 +1,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <ctype.h>
+#include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <limits.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +17,18 @@
 #include "ls.h"
 
 extern config_t ls_config;
+
+size_t count_digits(size_t);
+int max(int, int);
+void print_raw_or_not(const char *);
+void print_filetype_char(fileinfo_t);
+char *human_readable_size_from(size_t, int);
+bool is_older_than_6months(const struct timespec);
+void print_file_time(fileinfo_t);
+void print_symlink_dest(fileinfo_t);
+void print_fileinfos(fileinfos_t *);
+fileinfos_t *fileinfos_from_ftsents(FTSENT *, bool, bool, bool);
+void fileinfos_free(fileinfos_t *);
 
 /*
  * get the number of digits in a number
@@ -64,6 +80,10 @@ print_raw_or_not(const char *str)
 	}
 }
 
+#define F_EXECUTABLE '*'
+#define F_DIRECTORY '/'
+#define F_SYMLINK '@'
+#define F_PIPE '|'
 #define S_ISEXEC (S_IXUSR | S_IXGRP | S_IXOTH)
 
 /*
@@ -74,17 +94,17 @@ print_filetype_char(fileinfo_t fileinfo)
 {
 	switch (fileinfo.mode[0]) {
 	case 'l':
-		putchar('@');
+		putchar(F_SYMLINK);
 		break;
 	case 'p':
-		putchar('|');
+		putchar(F_PIPE);
 		break;
 	case 'd':
-		putchar('/');
+		putchar(F_DIRECTORY);
 		break;
 	default:
 		if (GET(fileinfo.statp->st_mode, S_ISEXEC)) {
-			putchar('*');
+			putchar(F_EXECUTABLE);
 		}
 	}
 }
@@ -95,7 +115,7 @@ print_filetype_char(fileinfo_t fileinfo)
  * returns heap-allocated string of length 5 (including nul).
  */
 char *
-human_readable_size_from(unsigned long size, int options)
+human_readable_size_from(size_t size, int options)
 {
 	int flags;
 	size_t len;
@@ -137,6 +157,10 @@ is_older_than_6months(const struct timespec tim)
 
 	return diff >= 365 * SECONDS_PER_DAY / 2;
 }
+
+#define DATE_FORMAT "%b %e "
+#define TIME_FORMAT "%H:%M"
+#define YEAR_FORMAT "%Y"
 
 /*
  * Returns heap-allocated string with correct time based on config
@@ -406,8 +430,7 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 			err(EXIT_FAILURE, "failed to acquire localtime");
 		}
 
-		fileinfo.older_than_6months =
-		    is_older_than_6months(tim);
+		fileinfo.older_than_6months = is_older_than_6months(tim);
 
 		fileinfos->arr[fileinfos->size++] = fileinfo;
 

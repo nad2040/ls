@@ -1,12 +1,16 @@
 #include "ls.h"
 
-#include <fts.h>
+#include <errno.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "config.h"
 #include "sort.h"
 
 extern config_t ls_config;
+
+int ls(int, char *[]);
+int main(int, char *[]);
 
 /*
  * Main ls function that uses FTS to traverse the filesystem and
