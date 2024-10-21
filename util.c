@@ -114,27 +114,28 @@ human_readable_size_from(unsigned long size, int options)
 	return buf;
 }
 
+#define SECONDS_PER_DAY 86400
+
 /*
  * Compares current time to time tm which is also in local time.
  * returns true if the time is more than 6 months away.
  */
 bool
-is_older_than_6months(const struct tm tm)
+is_older_than_6months(const struct timespec tim)
 {
-	time_t now;
-	struct tm *current;
+	time_t diff;
+	struct timespec current_tim;
 
-	if ((now = time(NULL)) == -1) {
-		err(EXIT_FAILURE, "failed to get time");
+	if (clock_gettime(CLOCK_REALTIME, &current_tim) < 0) {
+		err(EXIT_FAILURE, "couldn't get current time");
 	}
 
-	if ((current = localtime(&now)) == NULL) {
-		err(EXIT_FAILURE, "failed to acquire localtime");
+	diff = tim.tv_sec - current_tim.tv_sec;
+	if (diff < 0) {
+		diff = -diff;
 	}
 
-	return (current->tm_year - tm.tm_year) * 12 +
-	           (current->tm_mon - tm.tm_mon) >=
-	       6;
+	return diff >= 365 * SECONDS_PER_DAY / 2;
 }
 
 /*
@@ -282,7 +283,7 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 	dev_t rdev;
 	blkcnt_t block_count;
 	off_t file_size;
-	time_t time;
+	struct timespec tim;
 	struct passwd *pwd;
 	struct group *grp;
 
@@ -392,21 +393,21 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 
 		switch (ls_config.time) {
 		case ATIME:
-			time = fileinfo.statp->st_atime;
+			tim = fileinfo.statp->st_atim;
 			break;
 		case MTIME:
-			time = fileinfo.statp->st_mtime;
+			tim = fileinfo.statp->st_mtim;
 			break;
 		case CTIME:
-			time = fileinfo.statp->st_ctime;
+			tim = fileinfo.statp->st_ctim;
 			break;
 		}
-		if (localtime_r(&time, &fileinfo.time) == NULL) {
+		if (localtime_r(&tim.tv_sec, &fileinfo.time) == NULL) {
 			err(EXIT_FAILURE, "failed to acquire localtime");
 		}
 
 		fileinfo.older_than_6months =
-		    is_older_than_6months(fileinfo.time);
+		    is_older_than_6months(tim);
 
 		fileinfos->arr[fileinfos->size++] = fileinfo;
 
@@ -436,10 +437,15 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 		    max(fileinfos->max_rdev_nums_len,
 		        fileinfos->max_major_len + 2 +
 		            fileinfos->max_minor_len); /* + 2 for the ", " */
-		fileinfos->max_size_or_rdev_nums_len =
-		    max(fileinfos->max_size_or_rdev_nums_len,
-		        max(fileinfos->max_file_size_len,
-		            fileinfos->max_rdev_nums_len));
+		if (fileinfo.use_rdev_nums) {
+			fileinfos->max_size_or_rdev_nums_len =
+			    max(fileinfos->max_size_or_rdev_nums_len,
+			        fileinfos->max_rdev_nums_len);
+		} else {
+			fileinfos->max_size_or_rdev_nums_len =
+			    max(fileinfos->max_size_or_rdev_nums_len,
+			        fileinfos->max_file_size_len);
+		}
 
 		if (fileinfo.older_than_6months) {
 			fileinfos->max_time_or_year_len =

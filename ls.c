@@ -87,7 +87,10 @@ ls(int argc, char *argv[])
 		case FTS_ERR: /* FALLTHROUGH */
 		case FTS_NS:  /* FALLTHROUGH */
 		case FTS_NSOK:
-			warn("%s", fs_node->fts_path);
+			if (fs_node->fts_level > 0) {
+				errno = fs_node->fts_errno;
+				warn("%s", fs_node->fts_name);
+			}
 			exitcode = EXIT_FAILURE;
 			break;
 		case FTS_D:
@@ -142,6 +145,7 @@ ls(int argc, char *argv[])
 
 /*
  * Main function to run ls
+ * Parse the args and then run the ls function.
  */
 int
 main(int argc, char *argv[])
