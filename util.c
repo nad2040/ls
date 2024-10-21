@@ -207,6 +207,7 @@ print_symlink_dest(fileinfo_t fileinfo)
 	if ((len = readlink(link_path, link_dest, PATH_MAX)) == -1) {
 		warn("%s", link_path);
 	}
+	free(link_path);
 	link_dest[len] = '\0';
 	(void)printf(" -> %s", link_dest);
 }
