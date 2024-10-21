@@ -41,7 +41,6 @@ default_config(void)
 	}
 }
 
-
 /*
  * Parse the arguments using getopts(3)
  * Pass in pointers to argc and argv directly from main.
@@ -65,7 +64,7 @@ argparse(int *argc, char ***argv)
 	ls_config.blocksize = blocksize_env;
 
 	opterr = 0;
-	while ((c = getopt(*argc, *argv, "AacdFfhiklnqRrSstuw:")) != -1) {
+	while ((c = getopt(*argc, *argv, "AacdFfhiklnqRrSstuw")) != -1) {
 		switch (c) {
 		case 'A': /* don't show dotdirs */
 			if (!has_set_a) {
@@ -86,7 +85,6 @@ argparse(int *argc, char ***argv)
 			break;
 		case 's': /* show blksize count */
 			SET(ls_config.opts, SHOW_BLKCOUNT);
-			ls_config.blkcount_fmt = BLKSIZE_ENV;
 			break;
 		case 'h': /* show the human readable for both regular size and
 		             blksize count */
@@ -150,8 +148,9 @@ argparse(int *argc, char ***argv)
 			} else {
 				warnx("unknown option -- \\x%x", optopt);
 			}
-			fprintf(stderr, "usage: %s [-AacdFfhiklnqRrSstuw] [file ...]\n",
-			     getprogname());
+			fprintf(stderr,
+			        "usage: %s [-AacdFfhiklnqRrSstuw] [file ...]\n",
+			        getprogname());
 			exit(EXIT_FAILURE);
 		default:
 			errx(EXIT_FAILURE, "getopt");

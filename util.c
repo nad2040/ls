@@ -66,6 +66,9 @@ print_raw_or_not(const char *str)
 
 #define S_ISEXEC (S_IXUSR | S_IXGRP | S_IXOTH)
 
+/*
+ * Print filetype char for file based on the mode parsed by strmode.
+ */
 void
 print_filetype_char(fileinfo_t fileinfo)
 {
@@ -105,9 +108,7 @@ human_readable_size_from(unsigned long size, int options)
 	}
 
 	flags = HN_NOSPACE | HN_B | options;
-	if (humanize_number(buf, len, size, NULL, HN_AUTOSCALE,
-	                           flags) < 0)
-	{
+	if (humanize_number(buf, len, size, NULL, HN_AUTOSCALE, flags) < 0) {
 		err(EXIT_FAILURE, "failed to humanize %ld", size);
 	}
 	return buf;
@@ -206,11 +207,12 @@ print_fileinfos(fileinfos_t *fileinfos)
 	if ((long_format || (show_blkcount && ls_config.istty)) &&
 	    fileinfos->size > 0) {
 		if (human_readable) {
-			printf("total %s\n",
-			       human_readable_size_from(
-				   fileinfos->total_size, 0));
+			printf("total %s\n", human_readable_size_from(
+						 fileinfos->total_size, 0));
 		} else {
-			printf("total %ld\n", fileinfos->total_blocks);
+			printf("total %ld\n", (fileinfos->total_blocks * 512 +
+			                       ls_config.blocksize - 1) /
+			                          ls_config.blocksize);
 		}
 	}
 
@@ -221,8 +223,13 @@ print_fileinfos(fileinfos_t *fileinfos)
 			       fileinfo.statp->st_ino);
 		}
 		if (show_blkcount) {
-			printf("%*s ", fileinfos->max_blockcount_len,
-			       fileinfo.block_count);
+			if (human_readable) {
+				printf("%*s ", fileinfos->max_file_size_len,
+				       fileinfo.file_size);
+			} else {
+				printf("%*s ", fileinfos->max_blockcount_len,
+				       fileinfo.block_count);
+			}
 		}
 		if (long_format) {
 			printf("%s ", fileinfos->arr[i].mode);
@@ -322,8 +329,9 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 		fileinfo.path = trav->fts_path;
 		fileinfo.statp = trav->fts_statp;
 
-		ASPRINTF("couldn't alloc string for parent accpath", &fileinfo.parent_accpath,
-		         "%s", trav->fts_parent->fts_accpath);
+		ASPRINTF("couldn't alloc string for parent accpath",
+		         &fileinfo.parent_accpath, "%s",
+		         trav->fts_parent->fts_accpath);
 
 		uid = trav->fts_statp->st_uid;
 		if ((pwd = getpwuid(uid)) == NULL ||
@@ -351,8 +359,8 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 		fileinfos->total_size += file_size;
 
 		if (ls_config.blkcount_fmt == HUMAN_READABLE) {
-			fileinfo.block_count =
-			    human_readable_size_from(block_count * 512, HN_DECIMAL);
+			fileinfo.block_count = human_readable_size_from(
+			    block_count * 512, HN_DECIMAL);
 			fileinfo.file_size =
 			    human_readable_size_from(file_size, HN_DECIMAL);
 		} else {
@@ -368,6 +376,8 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 
 		mode = trav->fts_statp->st_mode;
 
+		strmode(mode, fileinfo.mode);
+
 		fileinfo.use_rdev_nums =
 		    (S_ISCHR(mode) != 0 || S_ISBLK(mode) != 0);
 
@@ -379,8 +389,6 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 			fileinfo.major = 0;
 			fileinfo.minor = 0;
 		}
-
-		strmode(mode, fileinfo.mode);
 
 		switch (ls_config.time) {
 		case ATIME:

@@ -47,7 +47,8 @@ ls(int argc, char *argv[])
 	/* manual doesn't explicitly state NULL is returned, so check errno as
 	 * well */
 	errno = 0;
-	if ((ftsp = fts_open(path_argv, fts_open_options, initial_sort_func)) == NULL ||
+	if ((ftsp = fts_open(path_argv, fts_open_options, initial_sort_func)) ==
+	        NULL ||
 	    errno != 0) {
 		exitcode = EXIT_FAILURE;
 	}
@@ -75,7 +76,8 @@ ls(int argc, char *argv[])
 	ftsp->fts_compar = ls_config.compare;
 
 	while ((fs_node = fts_read(ftsp)) != NULL) {
-		if (fs_node->fts_level > ls_config.max_depth || fs_node->fts_level < 0) {
+		if (fs_node->fts_level > ls_config.max_depth ||
+		    fs_node->fts_level < 0) {
 			fts_set(ftsp, fs_node, FTS_SKIP);
 			continue;
 		}
@@ -89,7 +91,9 @@ ls(int argc, char *argv[])
 			exitcode = EXIT_FAILURE;
 			break;
 		case FTS_D:
-			if (ls_config.dots == NO_DOTS && fs_node->fts_name[0] == '.' && fs_node->fts_level > 0) {
+			if (ls_config.dots == NO_DOTS &&
+			    fs_node->fts_name[0] == '.' &&
+			    fs_node->fts_level > 0) {
 				fts_set(ftsp, fs_node, FTS_SKIP);
 				continue;
 			}
@@ -97,20 +101,24 @@ ls(int argc, char *argv[])
 				putchar('\n');
 			}
 			children = fts_children(ftsp, 0);
-			if ((ls_config.recurse == FULL_DEPTH && fs_node->fts_level > 0)
-				|| did_previously_print || more_than_one_dir) {
-				/* don't print trailing '/' like ls, unless path is just '/' */
+			if ((ls_config.recurse == FULL_DEPTH &&
+			     fs_node->fts_level > 0) ||
+			    did_previously_print || more_than_one_dir) {
+				/* don't print trailing '/' like ls, unless path
+				 * is just '/' */
 				ignore_trailing_slash_len =
 				    (int)strlen(fs_node->fts_path) - 1;
-				if (fs_node
-				        ->fts_path[ignore_trailing_slash_len] !=
-				    '/' || ignore_trailing_slash_len == 0) {
+				if (fs_node->fts_path
+				            [ignore_trailing_slash_len] !=
+				        '/' ||
+				    ignore_trailing_slash_len == 0) {
 					ignore_trailing_slash_len++;
 				}
 				printf("%.*s:\n", ignore_trailing_slash_len,
 				       fs_node->fts_path);
 			}
-			fileinfos = fileinfos_from_ftsents(children, false, false, true);
+			fileinfos = fileinfos_from_ftsents(children, false,
+			                                   false, true);
 			print_fileinfos(fileinfos);
 			fileinfos_free(fileinfos);
 			if (!did_previously_print) {
@@ -132,6 +140,9 @@ ls(int argc, char *argv[])
 	return exitcode;
 }
 
+/*
+ * Main function to run ls
+ */
 int
 main(int argc, char *argv[])
 {
