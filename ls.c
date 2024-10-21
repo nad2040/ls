@@ -49,8 +49,7 @@ ls(int argc, char *argv[])
 	errno = 0;
 	if ((ftsp = fts_open(path_argv, fts_open_options, initial_sort_func)) == NULL ||
 	    errno != 0) {
-		printf("ftsp = %p\nerrno = %d\n", (void *)ftsp, errno);
-		err(EXIT_FAILURE, "fts_open");
+		exitcode = EXIT_FAILURE;
 	}
 
 	did_previously_print = false;
@@ -68,14 +67,15 @@ ls(int argc, char *argv[])
 	if (fileinfos_dir->size > 1) {
 		more_than_one_dir = true;
 	}
+	if (ls_config.recurse == NO_DEPTH) {
+		print_fileinfos(fileinfos_dir);
+	}
 	fileinfos_free(fileinfos_dir);
 
 	ftsp->fts_compar = ls_config.compare;
 
 	while ((fs_node = fts_read(ftsp)) != NULL) {
 		if (fs_node->fts_level > ls_config.max_depth || fs_node->fts_level < 0) {
-			/* printf("Skipping %s at level %d\n",
-			 * fs_node->fts_path, fs_node->fts_level); */
 			fts_set(ftsp, fs_node, FTS_SKIP);
 			continue;
 		}
@@ -85,7 +85,7 @@ ls(int argc, char *argv[])
 		case FTS_ERR: /* FALLTHROUGH */
 		case FTS_NS:  /* FALLTHROUGH */
 		case FTS_NSOK:
-			warn("%s", fs_node->fts_name);
+			warn("%s", fs_node->fts_path);
 			exitcode = EXIT_FAILURE;
 			break;
 		case FTS_D:
@@ -99,12 +99,12 @@ ls(int argc, char *argv[])
 			children = fts_children(ftsp, 0);
 			if ((ls_config.recurse == FULL_DEPTH && fs_node->fts_level > 0)
 				|| did_previously_print || more_than_one_dir) {
-				/* don't print trailing '/' like ls */
+				/* don't print trailing '/' like ls, unless path is just '/' */
 				ignore_trailing_slash_len =
 				    (int)strlen(fs_node->fts_path) - 1;
 				if (fs_node
 				        ->fts_path[ignore_trailing_slash_len] !=
-				    '/') {
+				    '/' || ignore_trailing_slash_len == 0) {
 					ignore_trailing_slash_len++;
 				}
 				printf("%.*s:\n", ignore_trailing_slash_len,

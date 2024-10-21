@@ -41,15 +41,6 @@ default_config(void)
 	}
 }
 
-/*
- * Prints usage statement for ls.
- */
-void
-usage(void)
-{
-	errx(EXIT_FAILURE, "Usage: %s [-AacdFfhiklnqRrSstuw] [file ...]\n",
-	     getprogname());
-}
 
 /*
  * Parse the arguments using getopts(3)
@@ -96,7 +87,6 @@ argparse(int *argc, char ***argv)
 		case 's': /* show blksize count */
 			SET(ls_config.opts, SHOW_BLKCOUNT);
 			ls_config.blkcount_fmt = BLKSIZE_ENV;
-			ls_config.blocksize = blocksize_env;
 			break;
 		case 'h': /* show the human readable for both regular size and
 		             blksize count */
@@ -156,12 +146,13 @@ argparse(int *argc, char ***argv)
 			break;
 		case '?':
 			if (isprint(optopt)) {
-				errx(EXIT_FAILURE, "Unknown option `%c'\n",
-				     optopt);
+				warnx("unknown option -- %c", optopt);
 			} else {
-				errx(EXIT_FAILURE, "Unknown option `\\x%x'\n",
-				     optopt);
+				warnx("unknown option -- \\x%x", optopt);
 			}
+			fprintf(stderr, "usage: %s [-AacdFfhiklnqRrSstuw] [file ...]\n",
+			     getprogname());
+			exit(EXIT_FAILURE);
 		default:
 			errx(EXIT_FAILURE, "getopt");
 		}

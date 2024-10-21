@@ -233,7 +233,7 @@ print_fileinfos(fileinfos_t *fileinfos)
 			printf("%-*s  ", fileinfos->max_group_name_or_id_len,
 			       fileinfo.group_name_or_id);
 			if (fileinfo.use_rdev_nums) {
-				printf("%*s%*d, %.*d ",
+				printf("%*s%*d, %*d ",
 				       fileinfos->max_size_or_rdev_nums_len -
 				           fileinfos->max_rdev_nums_len,
 				       "", /* print appropriate padding if the
