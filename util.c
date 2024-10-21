@@ -223,7 +223,7 @@ print_fileinfos(fileinfos_t *fileinfos)
 			       fileinfo.statp->st_ino);
 		}
 		if (show_blkcount) {
-			if (human_readable) {
+			if (human_readable && !long_format) {
 				printf("%*s ", fileinfos->max_file_size_len,
 				       fileinfo.file_size);
 			} else {
