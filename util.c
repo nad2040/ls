@@ -87,6 +87,33 @@ print_filetype_char(fileinfo_t fileinfo)
 }
 
 /*
+ * front end for humanize_number with the same options
+ * AUTOSCALE, NOSPACE, and B are forced.
+ * returns heap-allocated string of length 5 (including nul).
+ */
+char *
+human_readable_size_from(unsigned long size, int options)
+{
+	int flags;
+	size_t len;
+	char *buf;
+
+	len = 5;
+	if ((buf = calloc(1, len)) == NULL) {
+		err(EXIT_FAILURE,
+		    "failed to allocate string for human readable format");
+	}
+
+	flags = HN_NOSPACE | HN_B | options;
+	if (humanize_number(buf, len, size, NULL, HN_AUTOSCALE,
+	                           flags) < 0)
+	{
+		err(EXIT_FAILURE, "failed to humanize %ld", size);
+	}
+	return buf;
+}
+
+/*
  * Compares current time to time tm which is also in local time.
  * returns true if the time is more than 6 months away.
  */
@@ -145,31 +172,16 @@ print_file_time(fileinfo_t fileinfo)
 void
 print_symlink_dest(fileinfo_t fileinfo)
 {
-	int fd;
 	ssize_t len;
 	char *link_path;
-	char link_dest[PATH_MAX];
+	char link_dest[PATH_MAX + 1];
 
-	printf("\ncwd: %s\n", getcwd(NULL, 0));
-	printf("path: %s\n", fileinfo.path);
-	printf("accpath: %s\n", fileinfo.accpath);
-	printf("name: %s\n", fileinfo.name);
-
-	if ((fd = open(fileinfo.path, O_RDONLY | O_EXCL)) < 0) {
-		err(EXIT_FAILURE, "couldn't open fts_path for symlink");
+	ASPRINTF("couldn't alloc string for symlink path", &link_path, "%s/%s",
+	         fileinfo.parent_accpath, fileinfo.name);
+	if ((len = readlink(link_path, link_dest, PATH_MAX)) == -1) {
+		warn("%s", link_path);
 	}
-
-
-	ASPRINTF("couldn't alloc string for symlink path",
-		 &link_path, "%s/%s", fileinfo.path, fileinfo.accpath);
-	if ((len = readlinkat(fd, fileinfo.accpath, link_dest, sizeof(link_dest) - 1)) ==
-	    -1) {
-		err(EXIT_FAILURE, "readlink %s", link_path);
-	}
-
-	(void)close(fd);
 	link_dest[len] = '\0';
-
 	printf(" -> %s", link_dest);
 }
 
@@ -180,7 +192,8 @@ print_symlink_dest(fileinfo_t fileinfo)
 void
 print_fileinfos(fileinfos_t *fileinfos)
 {
-	bool long_format, show_inodes, show_blkcount, show_filetype_sym;
+	bool long_format, show_inodes, show_blkcount, show_filetype_sym,
+	    human_readable;
 	int i;
 	fileinfo_t fileinfo;
 
@@ -188,9 +201,17 @@ print_fileinfos(fileinfos_t *fileinfos)
 	show_inodes = GET(ls_config.opts, SHOW_INODES);
 	show_blkcount = GET(ls_config.opts, SHOW_BLKCOUNT);
 	show_filetype_sym = GET(ls_config.opts, SHOW_FILETYPE_SYM);
+	human_readable = (ls_config.blkcount_fmt == HUMAN_READABLE);
 
-	if ((long_format || show_blkcount) && fileinfos->size > 0) {
-		printf("total %ld\n", fileinfos->total_blocks);
+	if ((long_format || (show_blkcount && ls_config.istty)) &&
+	    fileinfos->size > 0) {
+		if (human_readable) {
+			printf("total %s\n",
+			       human_readable_size_from(
+				   fileinfos->total_size, 0));
+		} else {
+			printf("total %ld\n", fileinfos->total_blocks);
+		}
 	}
 
 	for (i = 0; i < fileinfos->size; ++i) {
@@ -238,41 +259,6 @@ print_fileinfos(fileinfos_t *fileinfos)
 		}
 		putchar('\n');
 	}
-}
-
-/*
- * allocates a human readable string based on given size.
- * suffixes from SI abbreviations: B K M G T P E Z Y R Q
- * since ANSI doesn't allow long long, only up to exabytes are allowed.
- * TODO: REPLACE FUNCTIONALITY WITH HUMANIZE_NUMBER
- */
-char *
-human_readable_size_from(unsigned long size)
-{
-	unsigned long base;
-	double div;
-	const char *suffix;
-	const char *suffixes = "BKMGTPEZYRQ";
-	char *human_readable_string;
-
-	suffix = suffixes;
-
-	base = 1;
-	while (*suffix != '\0' && (double)size / base / 1024 >= 0.95) {
-		base *= 1024;
-		suffix++;
-	}
-
-	div = (double)size / base;
-
-	if (base > 1 && div < 10) {
-		ASPRINTF("failed to alloc human readable string",
-		         &human_readable_string, "%.1f%c", div, *suffix);
-	} else {
-		ASPRINTF("failed to alloc human readable string",
-		         &human_readable_string, "%.0f%c", div, *suffix);
-	}
-	return human_readable_string;
 }
 
 /*
@@ -336,8 +322,8 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 		fileinfo.path = trav->fts_path;
 		fileinfo.statp = trav->fts_statp;
 
-		ASPRINTF("couldn't alloc string for accpath",
-			 &fileinfo.accpath, "%s", trav->fts_accpath);
+		ASPRINTF("couldn't alloc string for parent accpath", &fileinfo.parent_accpath,
+		         "%s", trav->fts_parent->fts_accpath);
 
 		uid = trav->fts_statp->st_uid;
 		if ((pwd = getpwuid(uid)) == NULL ||
@@ -360,17 +346,20 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 		}
 
 		block_count = trav->fts_statp->st_blocks;
+		fileinfos->total_blocks += block_count;
 		file_size = trav->fts_statp->st_size;
+		fileinfos->total_size += file_size;
 
 		if (ls_config.blkcount_fmt == HUMAN_READABLE) {
-			block_count *= 512;
 			fileinfo.block_count =
-			    human_readable_size_from(block_count);
+			    human_readable_size_from(block_count * 512, HN_DECIMAL);
 			fileinfo.file_size =
-			    human_readable_size_from(file_size);
+			    human_readable_size_from(file_size, HN_DECIMAL);
 		} else {
-			block_count = (block_count * 512) / ls_config.blocksize;
-			fileinfos->total_blocks += block_count;
+			/* use ceiling */
+			block_count =
+			    (block_count * 512 + ls_config.blocksize - 1) /
+			    ls_config.blocksize;
 			ASPRINTF("couldn't alloc string for block count",
 			         &fileinfo.block_count, "%ld", block_count);
 			ASPRINTF("couldn't alloc string for file size",
@@ -408,7 +397,8 @@ fileinfos_from_ftsents(FTSENT *trav, bool non_dir_only, bool dir_only,
 			err(EXIT_FAILURE, "failed to acquire localtime");
 		}
 
-		fileinfo.older_than_6months = is_older_than_6months(fileinfo.time);
+		fileinfo.older_than_6months =
+		    is_older_than_6months(fileinfo.time);
 
 		fileinfos->arr[fileinfos->size++] = fileinfo;
 
@@ -470,7 +460,7 @@ fileinfos_free(fileinfos_t *fileinfos)
 	for (i = 0; i < fileinfos->size; ++i) {
 		free(fileinfos->arr[i].file_size);
 		free(fileinfos->arr[i].block_count);
-		free(fileinfos->arr[i].accpath);
+		free(fileinfos->arr[i].parent_accpath);
 		free(fileinfos->arr[i].owner_name_or_id);
 		free(fileinfos->arr[i].group_name_or_id);
 	}

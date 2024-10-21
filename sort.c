@@ -26,9 +26,9 @@ lexico_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 int
 time_sort_func(const FTSENT **fts_ent1, const FTSENT **fts_ent2)
 {
-	int ret;
+	time_t ret;
 	struct timespec ts1, ts2;
-	switch (ls_config.sort) {
+	switch (ls_config.time) {
 	case MTIME:
 		ts1 = (*fts_ent1)->fts_statp->st_mtim;
 		ts2 = (*fts_ent2)->fts_statp->st_mtim;

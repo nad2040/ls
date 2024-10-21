@@ -73,6 +73,7 @@ typedef struct config_t {
 	blksize_t blocksize;
 	int max_depth;
 	int (*compare)(const FTSENT **, const FTSENT **);
+	bool istty;
 } config_t;
 
 void argparse(int *, char ***);

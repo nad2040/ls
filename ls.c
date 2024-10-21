@@ -85,6 +85,7 @@ ls(int argc, char *argv[])
 		case FTS_ERR: /* FALLTHROUGH */
 		case FTS_NS:  /* FALLTHROUGH */
 		case FTS_NSOK:
+			warn("%s", fs_node->fts_name);
 			exitcode = EXIT_FAILURE;
 			break;
 		case FTS_D:

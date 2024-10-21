@@ -1,7 +1,9 @@
 #include "config.h"
-#include "sort.h"
 
+#include <stdio.h>
 #include <stdlib.h>
+
+#include "sort.h"
 
 config_t ls_config;
 
@@ -29,8 +31,10 @@ default_config(void)
 	 * output filetype */
 	errno = 0;
 	if ((istty = isatty(STDOUT_FILENO)) == 1) {
+		ls_config.istty = true;
 		UNSET(ls_config.opts, RAW_PRINT);
 	} else if (errno == ENOTTY) {
+		ls_config.istty = false;
 		SET(ls_config.opts, RAW_PRINT);
 	} else {
 		err(EXIT_FAILURE, "isatty");
@@ -47,34 +51,6 @@ usage(void)
 	     getprogname());
 }
 
-#define BLOCKSIZE 512 /* default BLOCKSIZE in struct stat */
-
-/*
- * Get the BLOCKSIZE environment variable.
- */
-long
-get_blocksize_env()
-{
-	long blocksize;
-	char *blocksize_env, *ep;
-
-	if ((blocksize_env = getenv("BLOCKSIZE")) == NULL) {
-		return BLOCKSIZE;
-	}
-	errno = 0;
-	blocksize = strtol(blocksize_env, &ep, 10);
-	if (ep == blocksize_env || *ep != '\0') {
-		errx(EXIT_FAILURE, "invalid BLOCKSIZE %s", blocksize_env);
-	}
-	if (errno != 0) {
-		err(EXIT_FAILURE, "strtol BLOCKSIZE");
-	}
-	if (blocksize < 0) {
-		errx(EXIT_FAILURE, "negative BLOCKSIZE %ld", blocksize);
-	}
-	return blocksize;
-}
-
 /*
  * Parse the arguments using getopts(3)
  * Pass in pointers to argc and argv directly from main.
@@ -85,12 +61,16 @@ argparse(int *argc, char ***argv)
 	bool has_set_a;
 	int c;
 	long blocksize_env;
+	char *bsize;
 
 	memset(&ls_config, 0, sizeof(config_t));
 
 	default_config();
 
-	blocksize_env = get_blocksize_env();
+	if ((bsize = getbsize(NULL, &blocksize_env)) == NULL) {
+		err(EXIT_FAILURE, "getbsize");
+	}
+	/* printf("preferred blocksize is %ld\n", blocksize_env); */
 	ls_config.blocksize = blocksize_env;
 
 	opterr = 0;
@@ -158,8 +138,8 @@ argparse(int *argc, char ***argv)
 			break;
 			/* time flags */
 		case 't':
-			ls_config.sort = TIME_SORT; /* only -t enables sorting by time */
-			ls_config.time = MTIME;
+			ls_config.sort = TIME_SORT;
+			/* only -t enables sorting by time */
 			break;
 		case 'u':
 			ls_config.time = ATIME;
