@@ -245,7 +245,7 @@ print_fileinfos(fileinfos_t *fileinfos)
 	for (i = 0; i < fileinfos->size; ++i) {
 		fileinfo = fileinfos->arr[i];
 		if (show_inodes) {
-			(void)printf("%.*ld ", fileinfos->max_inode_len,
+			(void)printf("%*ld ", fileinfos->max_inode_len,
 			       fileinfo.statp->st_ino);
 		}
 		if (show_blkcount) {
